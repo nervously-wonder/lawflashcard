@@ -441,7 +441,10 @@
   <div style="margin-top:16px;">
     <div class="progress-text">
       <span id="progressLabel">1 / 5</span>
-      <span id="scoreLabel" class="score-badge">0점</span>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-outline btn-sm" onclick="confirmGoHome()">← 홈</button>
+        <span id="scoreLabel" class="score-badge">0점</span>
+      </div>
     </div>
     <div class="progress-bar-wrap">
       <div id="progressFill" class="progress-bar-fill" style="width:0%"></div>
@@ -1095,6 +1098,13 @@ function showResults() {
 
 function retryQuiz() {
   startQuiz();
+}
+
+function confirmGoHome() {
+  if (state.scores.length > 0 || state.answered) {
+    if (!confirm('홈으로 돌아가면 현재 진행이 초기화됩니다. 계속할까요?')) return;
+  }
+  goSetup();
 }
 
 function goSetup() {
