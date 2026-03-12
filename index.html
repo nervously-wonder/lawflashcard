@@ -399,7 +399,10 @@
 
   <div id="alertBox" class="alert"></div>
 
-  <div id="dataPreview" class="data-preview"></div>
+  <div id="dataPreview" class="data-preview" style="display:flex; justify-content:space-between; align-items:center;">
+    <span id="dataPreviewText"></span>
+    <button class="btn btn-outline btn-sm" onclick="clearSavedData()" style="flex-shrink:0; margin-left:10px;">초기화</button>
+  </div>
 
   <!-- Category Selection -->
   <div id="categoryCard" class="card" style="display:none;">
@@ -632,14 +635,16 @@ function parseRows(data) {
   return { cards };
 }
 
-function applyCards(cards) {
+function applyCards(cards, silent = false) {
   state.allCards = cards;
   state.categories = [...new Set(cards.map(c => c.category))].sort();
   state.selectedCategories = [...state.categories];
   renderCategories();
-  showAlert('success', `총 ${cards.length}개의 카드를 불러왔습니다. 카테고리: ${state.categories.join(', ')}`);
+  if (!silent) showAlert('success', `총 ${cards.length}개의 카드를 불러왔습니다. 카테고리: ${state.categories.join(', ')}`);
   showDataPreview(cards);
   document.getElementById('categoryCard').style.display = 'block';
+  // 카드 데이터 저장
+  localStorage.setItem('fc_cards', JSON.stringify(cards));
 }
 
 /* ===== LOAD: GOOGLE SHEETS ===== */
@@ -668,6 +673,7 @@ async function loadFromSheets() {
     const result = parseRows(parsed.data);
     if (result.error) { showAlert('error', result.error); return; }
     state.lastUrl = csvUrl;
+    localStorage.setItem('fc_sheets_url', csvUrl);
     applyCards(result.cards);
   } catch (e) {
     showAlert('error', `불러오기 실패: ${e.message}. 시트가 "웹에 게시"되어 있는지 확인하세요.`);
@@ -1148,14 +1154,28 @@ function showAlert(type, msg) {
 
 function showDataPreview(cards) {
   const cats = [...new Set(cards.map(c => c.category))];
-  const prev = document.getElementById('dataPreview');
-  prev.className = 'data-preview show';
-  prev.innerHTML = `<strong>${cards.length}개 카드</strong> 로드됨 &nbsp;|&nbsp; 카테고리 ${cats.length}개: ${cats.join(', ')}`;
+  document.getElementById('dataPreview').className = 'data-preview show';
+  document.getElementById('dataPreviewText').innerHTML =
+    `<strong>${cards.length}개 카드</strong> 로드됨 &nbsp;|&nbsp; 카테고리 ${cats.length}개: ${cats.join(', ')}`;
+}
+
+function clearSavedData() {
+  if (!confirm('저장된 카드 데이터를 삭제할까요?')) return;
+  localStorage.removeItem('fc_cards');
+  localStorage.removeItem('fc_sheets_url');
+  state.allCards = [];
+  state.categories = [];
+  state.selectedCategories = [];
+  document.getElementById('dataPreview').className = 'data-preview';
+  document.getElementById('categoryCard').style.display = 'none';
+  document.getElementById('sheetsUrl').value = '';
+  showAlert('info', '데이터가 초기화됐습니다.');
 }
 
 /* ===== GUIDE MODAL ===== */
-// 페이지 로드 시 저장된 키 표시
+// 페이지 로드 시 저장된 데이터 복원
 window.addEventListener('DOMContentLoaded', () => {
+  // API 키
   const key = getApiKey();
   if (key) {
     document.getElementById('geminiApiKey').value = key;
@@ -1165,6 +1185,22 @@ window.addEventListener('DOMContentLoaded', () => {
   // AI 설정 기본 접힘
   document.getElementById('aiSettingsBody').style.display = 'none';
   document.getElementById('aiSettingsArrow').textContent = '▶';
+
+  // Sheets URL 복원
+  const savedUrl = localStorage.getItem('fc_sheets_url');
+  if (savedUrl) document.getElementById('sheetsUrl').value = savedUrl;
+
+  // 카드 데이터 복원
+  const savedCards = localStorage.getItem('fc_cards');
+  if (savedCards) {
+    try {
+      const cards = JSON.parse(savedCards);
+      if (cards && cards.length > 0) {
+        applyCards(cards, true);
+        showAlert('success', `저장된 카드 ${cards.length}개를 불러왔습니다.${savedUrl ? ' (Google Sheets)' : ' (파일)'}`);
+      }
+    } catch (e) {}
+  }
 });
 
 const guides = {
