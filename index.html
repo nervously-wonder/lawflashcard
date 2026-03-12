@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>법학 플래시카드</title>
+  <style>
+    :root {
+      --primary: #1e40af;
+      --primary-light: #3b82f6;
+      --primary-bg: #eff6ff;
+      --success: #15803d;
+      --success-bg: #f0fdf4;
+      --error: #b91c1c;
+      --error-bg: #fef2f2;
+      --warning: #b45309;
+      --warning-bg: #fffbeb;
+      --gray-50: #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --gray-900: #0f172a;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.05);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .app-header {
+      background: var(--primary);
+      color: white;
+      padding: 16px 20px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(30,64,175,0.3);
+    }
+    .app-header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.3px; }
+    .app-header p { font-size: 0.8rem; opacity: 0.8; margin-top: 2px; }
+
+    .screen { display: none; max-width: 680px; margin: 0 auto; padding: 20px 16px 80px; }
+    .screen.active { display: block; }
+
+    /* ── 버튼 ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 6px; padding: 10px 20px; border-radius: 8px; border: none;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      transition: all 0.15s; text-decoration: none; white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #1d3fa3; }
+    .btn-primary:disabled { background: var(--gray-300); cursor: not-allowed; transform: none; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover { background: #166534; }
+    .btn-outline { background: white; color: var(--gray-700); border: 1.5px solid var(--gray-200); }
+    .btn-outline:hover { border-color: var(--primary-light); color: var(--primary); background: var(--primary-bg); }
+    .btn-hint { background: var(--warning-bg); color: var(--warning); border: 1.5px solid #fde68a; }
+    .btn-hint:hover { background: #fef3c7; }
+    .btn-correct { background: var(--success-bg); color: var(--success); border: 1.5px solid #bbf7d0; }
+    .btn-correct:hover { background: #dcfce7; }
+    .btn-wrong { background: var(--error-bg); color: var(--error); border: 1.5px solid #fecaca; }
+    .btn-wrong:hover { background: #fee2e2; }
+    .btn-lg { padding: 14px 28px; font-size: 1rem; border-radius: 10px; width: 100%; }
+    .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+
+    /* ── 카드 ── */
+    .card {
+      background: white; border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--gray-400); margin-bottom: 12px;
+    }
+
+    /* ── 셋업 화면 ── */
+    .tabs { display: flex; gap: 4px; background: var(--gray-100); border-radius: 10px; padding: 4px; margin-bottom: 16px; }
+    .tab-btn {
+      flex: 1; padding: 8px; border: none; background: transparent;
+      border-radius: 7px; font-size: 0.85rem; font-weight: 600;
+      color: var(--gray-500); cursor: pointer; transition: all 0.15s;
+    }
+    .tab-btn.active { background: white; color: var(--primary); box-shadow: var(--shadow); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    label.form-label {
+      display: block; font-size: 0.82rem; font-weight: 600;
+      color: var(--gray-600); margin-bottom: 6px;
+    }
+    .form-note { font-size: 0.75rem; color: var(--gray-400); margin-top: 4px; }
+    input[type="text"], input[type="url"], input[type="number"], textarea, select {
+      width: 100%; padding: 10px 12px; border: 1.5px solid var(--gray-200);
+      border-radius: 8px; font-size: 0.9rem; color: var(--gray-800);
+      background: white; transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    input:focus, textarea:focus { outline: none; border-color: var(--primary-light); }
+    textarea { resize: vertical; min-height: 90px; }
+    .form-group { margin-bottom: 14px; }
+
+    .file-drop {
+      border: 2px dashed var(--gray-200); border-radius: 10px;
+      padding: 28px 20px; text-align: center; cursor: pointer;
+      transition: all 0.15s; background: var(--gray-50);
+    }
+    .file-drop:hover, .file-drop.drag-over { border-color: var(--primary-light); background: var(--primary-bg); }
+    .file-drop-icon { font-size: 2rem; margin-bottom: 8px; }
+    .file-drop p { font-size: 0.85rem; color: var(--gray-500); }
+    .file-drop strong { color: var(--primary); }
+    #fileInput { display: none; }
+
+    .alert {
+      padding: 10px 14px; border-radius: 8px; font-size: 0.82rem;
+      margin-bottom: 12px; display: none;
+    }
+    .alert.show { display: flex; align-items: flex-start; gap: 8px; }
+    .alert-info { background: var(--primary-bg); color: var(--primary); border: 1px solid #bfdbfe; }
+    .alert-success { background: var(--success-bg); color: var(--success); border: 1px solid #bbf7d0; }
+    .alert-error { background: var(--error-bg); color: var(--error); border: 1px solid #fecaca; }
+
+    .data-preview {
+      background: var(--gray-50); border: 1.5px solid var(--gray-200);
+      border-radius: 8px; padding: 10px 14px; font-size: 0.82rem;
+      color: var(--gray-600); margin-bottom: 14px; display: none;
+    }
+    .data-preview.show { display: block; }
+    .data-preview strong { color: var(--gray-800); }
+
+    .category-grid {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px;
+    }
+    .cat-chip {
+      padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--gray-200);
+      font-size: 0.82rem; font-weight: 500; cursor: pointer;
+      background: white; color: var(--gray-600); transition: all 0.15s;
+      user-select: none;
+    }
+    .cat-chip:hover { border-color: var(--primary-light); color: var(--primary); }
+    .cat-chip.selected { background: var(--primary); color: white; border-color: var(--primary); }
+    .cat-chip.all-chip { background: var(--gray-100); font-weight: 700; }
+    .cat-chip.all-chip.selected { background: var(--primary); color: white; }
+
+    .count-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    }
+    .count-row label { font-size: 0.85rem; font-weight: 600; color: var(--gray-600); white-space: nowrap; }
+    .count-row input { width: 70px; text-align: center; }
+
+    /* ── 퀴즈 화면 ── */
+    .progress-bar-wrap {
+      height: 6px; background: var(--gray-100); border-radius: 3px;
+      margin-bottom: 16px; overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%; background: var(--primary-light); border-radius: 3px;
+      transition: width 0.3s;
+    }
+    .progress-text {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; color: var(--gray-400); margin-bottom: 6px;
+    }
+    .score-badge {
+      background: var(--primary-bg); color: var(--primary);
+      padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: 0.8rem;
+    }
+
+    .flashcard {
+      background: white; border-radius: 16px; box-shadow: var(--shadow-lg);
+      padding: 28px 24px; margin-bottom: 16px; min-height: 180px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .flashcard-category {
+      display: inline-block; padding: 3px 12px; border-radius: 12px;
+      background: var(--primary-bg); color: var(--primary);
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 0.3px;
+      align-self: flex-start;
+    }
+    .flashcard-question {
+      font-size: 1.05rem; font-weight: 600; color: var(--gray-800);
+      line-height: 1.65;
+    }
+
+    .hint-box {
+      background: var(--warning-bg); border: 1.5px solid #fde68a;
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 0.85rem; color: var(--warning);
+      display: none;
+    }
+    .hint-box.show { display: block; }
+    .hint-box strong { display: block; font-size: 0.72rem; margin-bottom: 3px; opacity: 0.7; }
+
+    .answer-section { margin-bottom: 12px; }
+    .answer-section label { font-size: 0.82rem; font-weight: 600; color: var(--gray-600); margin-bottom: 6px; display: block; }
+
+    .result-box {
+      border-radius: 10px; padding: 14px 16px;
+      margin-bottom: 12px; display: none;
+    }
+    .result-box.show { display: block; }
+    .result-box.correct-box { background: var(--success-bg); border: 1.5px solid #bbf7d0; }
+    .result-box.wrong-box { background: var(--error-bg); border: 1.5px solid #fecaca; }
+    .result-box.neutral-box { background: var(--gray-50); border: 1.5px solid var(--gray-200); }
+    .result-label {
+      font-size: 0.75rem; font-weight: 700; margin-bottom: 6px; opacity: 0.7;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .correct-box .result-label { color: var(--success); }
+    .wrong-box .result-label { color: var(--error); }
+    .neutral-box .result-label { color: var(--gray-500); }
+    .result-answer { font-size: 0.95rem; font-weight: 600; }
+    .correct-box .result-answer { color: var(--success); }
+    .wrong-box .result-answer { color: var(--error); }
+
+    .explanation-box {
+      background: var(--primary-bg); border: 1.5px solid #bfdbfe;
+      border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; display: none;
+    }
+    .explanation-box.show { display: block; }
+    .explanation-box .result-label { color: var(--primary); }
+    .explanation-text { font-size: 0.88rem; color: var(--gray-700); line-height: 1.7; }
+
+    .self-grade-row {
+      display: flex; gap: 8px; margin-bottom: 12px; display: none;
+    }
+    .self-grade-row.show { display: flex; }
+    .self-grade-row .label { font-size: 0.8rem; color: var(--gray-500); margin-bottom: 4px; align-self: center; }
+    .self-grade-row .btn { flex: 1; }
+
+    .quiz-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .quiz-actions .btn { flex: 1; min-width: 120px; }
+
+    /* ── 결과 화면 ── */
+    .result-header { text-align: center; padding: 28px 20px; }
+    .result-emoji { font-size: 3.5rem; margin-bottom: 12px; }
+    .result-score { font-size: 3rem; font-weight: 800; color: var(--primary); line-height: 1; }
+    .result-score span { font-size: 1.2rem; color: var(--gray-400); }
+    .result-msg { font-size: 1rem; color: var(--gray-600); margin-top: 8px; }
+
+    .result-list { margin-bottom: 20px; }
+    .result-item {
+      background: white; border-radius: 10px; padding: 14px 16px;
+      margin-bottom: 10px; box-shadow: var(--shadow);
+      border-left: 4px solid var(--gray-200);
+    }
+    .result-item.pass { border-left-color: var(--success); }
+    .result-item.fail { border-left-color: var(--error); }
+    .result-item-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    }
+    .result-item-num {
+      font-size: 0.72rem; font-weight: 700; color: var(--gray-400);
+      background: var(--gray-100); padding: 2px 8px; border-radius: 10px;
+    }
+    .result-item-cat {
+      font-size: 0.72rem; font-weight: 600;
+      background: var(--primary-bg); color: var(--primary);
+      padding: 2px 8px; border-radius: 10px;
+    }
+    .result-item-status {
+      margin-left: auto; font-size: 0.78rem; font-weight: 700;
+    }
+    .pass .result-item-status { color: var(--success); }
+    .fail .result-item-status { color: var(--error); }
+    .result-item-q { font-size: 0.88rem; color: var(--gray-700); margin-bottom: 4px; }
+    .result-item-a { font-size: 0.82rem; color: var(--gray-500); }
+    .result-item-a strong { color: var(--gray-700); }
+
+    .result-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .result-actions .btn { flex: 1; min-width: 140px; }
+
+    /* ── 가이드 모달 ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; padding: 16px; display: none;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: white; border-radius: 16px; max-width: 500px; width: 100%;
+      max-height: 85vh; overflow-y: auto; padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+    .modal h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; color: var(--gray-800); }
+    .modal h3 { font-size: 0.9rem; font-weight: 700; margin: 14px 0 6px; color: var(--gray-700); }
+    .modal p, .modal li { font-size: 0.85rem; color: var(--gray-600); line-height: 1.7; }
+    .modal ol, .modal ul { padding-left: 20px; }
+    .modal code {
+      background: var(--gray-100); padding: 1px 6px; border-radius: 4px;
+      font-family: monospace; font-size: 0.82rem; color: var(--gray-700);
+    }
+    .modal .close-btn { margin-top: 20px; }
+    .col-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    .col-table th, .col-table td {
+      padding: 7px 10px; border: 1px solid var(--gray-200);
+      font-size: 0.8rem; text-align: left;
+    }
+    .col-table th { background: var(--gray-50); font-weight: 700; color: var(--gray-600); }
+
+    /* ── 반응형 ── */
+    @media (max-width: 480px) {
+      .flashcard { padding: 20px 16px; }
+      .flashcard-question { font-size: 0.98rem; }
+      .quiz-actions { flex-direction: column; }
+      .result-actions { flex-direction: column; }
+    }
+
+    .divider { height: 1px; background: var(--gray-100); margin: 16px 0; }
+
+    .help-link {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.78rem; color: var(--primary-light); cursor: pointer;
+      text-decoration: underline; background: none; border: none;
+      padding: 0; font-family: inherit;
+    }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>법학 플래시카드</h1>
+  <p>스프레드시트 기반 법학 암기 훈련</p>
+</header>
+
+<!-- ============================================================ -->
+<!-- SETUP SCREEN -->
+<!-- ============================================================ -->
+<div id="setupScreen" class="screen active">
+
+  <div class="card" style="margin-top:16px;">
+    <div class="card-title">데이터 불러오기</div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('sheets')">Google Sheets</button>
+      <button class="tab-btn" onclick="switchTab('excel')">Excel / CSV 업로드</button>
+    </div>
+
+    <!-- Google Sheets Tab -->
+    <div id="tab-sheets" class="tab-panel active">
+      <div class="form-group">
+        <label class="form-label">스프레드시트 CSV 공개 URL</label>
+        <input type="url" id="sheetsUrl" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" />
+        <p class="form-note">
+          <button class="help-link" onclick="showGuide('sheets')">공개 URL 만드는 방법 보기</button>
+        </p>
+      </div>
+      <button class="btn btn-primary" onclick="loadFromSheets()">불러오기</button>
+    </div>
+
+    <!-- Excel/CSV Tab -->
+    <div id="tab-excel" class="tab-panel">
+      <div class="file-drop" id="fileDrop" onclick="document.getElementById('fileInput').click()">
+        <div class="file-drop-icon">📂</div>
+        <p><strong>클릭</strong>하거나 파일을 여기에 드래그하세요</p>
+        <p style="margin-top:4px; font-size:0.75rem; color:var(--gray-400);">.xlsx, .xls, .csv 지원</p>
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="loadFromFile(event)" />
+    </div>
+  </div>
+
+  <div id="alertBox" class="alert"></div>
+
+  <div id="dataPreview" class="data-preview"></div>
+
+  <!-- Category Selection -->
+  <div id="categoryCard" class="card" style="display:none;">
+    <div class="card-title">카테고리 선택</div>
+    <div id="categoryGrid" class="category-grid"></div>
+    <p class="form-note" style="margin-top:8px;">원하는 카테고리만 선택하거나 전체를 선택하세요.</p>
+
+    <div class="divider"></div>
+
+    <div class="count-row">
+      <label>문제 수</label>
+      <input type="number" id="quizCount" value="5" min="1" max="50" />
+      <span style="font-size:0.82rem; color:var(--gray-400);">문제</span>
+    </div>
+
+    <button class="btn btn-primary btn-lg" onclick="startQuiz()">시작하기</button>
+  </div>
+
+</div>
+
+<!-- ============================================================ -->
+<!-- QUIZ SCREEN -->
+<!-- ============================================================ -->
+<div id="quizScreen" class="screen">
+
+  <div style="margin-top:16px;">
+    <div class="progress-text">
+      <span id="progressLabel">1 / 5</span>
+      <span id="scoreLabel" class="score-badge">0점</span>
+    </div>
+    <div class="progress-bar-wrap">
+      <div id="progressFill" class="progress-bar-fill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Flashcard -->
+  <div class="flashcard">
+    <div id="cardCategory" class="flashcard-category"></div>
+    <div id="cardQuestion" class="flashcard-question"></div>
+  </div>
+
+  <!-- Hint -->
+  <div id="hintBox" class="hint-box">
+    <strong>힌트</strong>
+    <span id="hintText"></span>
+  </div>
+
+  <!-- Answer Input -->
+  <div id="answerSection" class="answer-section">
+    <label>내 답 작성</label>
+    <textarea id="userAnswer" placeholder="답을 입력하세요..." rows="3"></textarea>
+  </div>
+
+  <!-- Actions (before grading) -->
+  <div id="preGradeActions" class="quiz-actions" style="margin-bottom:12px;">
+    <button class="btn btn-hint" id="hintBtn" onclick="toggleHint()">힌트 보기</button>
+    <button class="btn btn-primary" onclick="gradeAnswer()">채점하기</button>
+  </div>
+
+  <!-- Result boxes (after grading) -->
+  <div id="resultBox" class="result-box">
+    <div class="result-label" id="resultLabel"></div>
+    <div class="result-answer" id="resultAnswer"></div>
+  </div>
+
+  <div id="modelAnswerBox" class="result-box neutral-box">
+    <div class="result-label">모범 답안</div>
+    <div class="result-answer" id="modelAnswer" style="color:var(--gray-700);"></div>
+  </div>
+
+  <div id="explanationBox" class="explanation-box">
+    <div class="result-label">해설</div>
+    <div id="explanationText" class="explanation-text"></div>
+  </div>
+
+  <!-- Self-grade (for subjective answers) -->
+  <div id="selfGradeRow" class="self-grade-row">
+    <span class="label">자기 평가:</span>
+    <button class="btn btn-correct btn-sm" onclick="selfGrade(true)">정답으로 처리</button>
+    <button class="btn btn-wrong btn-sm" onclick="selfGrade(false)">오답으로 처리</button>
+  </div>
+
+  <!-- Actions (after grading) -->
+  <div id="postGradeActions" class="quiz-actions" style="display:none;">
+    <button class="btn btn-outline" onclick="goSetup()">처음으로</button>
+    <button class="btn btn-primary" id="nextBtn" onclick="nextCard()">다음 문제</button>
+  </div>
+
+</div>
+
+<!-- ============================================================ -->
+<!-- RESULTS SCREEN -->
+<!-- ============================================================ -->
+<div id="resultsScreen" class="screen">
+  <div class="card result-header">
+    <div class="result-emoji" id="resultEmoji">🎉</div>
+    <div class="result-score"><span id="finalScore">0</span> / <span id="finalTotal">5</span> <span>점</span></div>
+    <div class="result-msg" id="resultMsg"></div>
+  </div>
+
+  <div class="result-list" id="resultList"></div>
+
+  <div class="result-actions">
+    <button class="btn btn-outline" onclick="goSetup()">처음으로</button>
+    <button class="btn btn-primary" onclick="retryQuiz()">같은 설정으로 재시도</button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- GUIDE MODAL -->
+<!-- ============================================================ -->
+<div id="guideModal" class="modal-overlay">
+  <div class="modal">
+    <h2 id="guideTitle"></h2>
+    <div id="guideContent"></div>
+    <button class="btn btn-outline btn-lg close-btn" onclick="closeGuide()">닫기</button>
+  </div>
+</div>
+
+<!-- External Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+<script>
+/* ===== STATE ===== */
+const state = {
+  allCards: [],
+  categories: [],
+  selectedCategories: [],
+  quizCards: [],
+  currentIndex: 0,
+  scores: [],       // {correct: bool, selfGraded: bool}
+  hintVisible: false,
+  answered: false,
+  quizCount: 5,
+  lastUrl: '',
+  lastFileData: null,
+};
+
+/* ===== COLUMN MAPPING ===== */
+// Expected columns (case-insensitive, trimmed)
+const COL_MAP = {
+  category:    ['카테고리', 'category', '분류', '과목'],
+  question:    ['질문', '문제', 'question', 'q'],
+  answer:      ['정답', '답', '답안', 'answer', 'a'],
+  hint:        ['힌트', 'hint'],
+  explanation: ['해설', '설명', 'explanation', 'explain'],
+};
+
+function findCol(headers, keys) {
+  const h = headers.map(x => String(x || '').trim().toLowerCase());
+  for (const key of keys) {
+    const idx = h.indexOf(key.toLowerCase());
+    if (idx !== -1) return idx;
+  }
+  // fallback: partial match
+  for (const key of keys) {
+    const idx = h.findIndex(x => x.includes(key.toLowerCase()));
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+function parseRows(data) {
+  if (!data || data.length < 2) return { error: '데이터가 너무 적습니다. 헤더 행과 데이터 행이 필요합니다.' };
+
+  const headers = data[0];
+  const colCat  = findCol(headers, COL_MAP.category);
+  const colQ    = findCol(headers, COL_MAP.question);
+  const colA    = findCol(headers, COL_MAP.answer);
+  const colH    = findCol(headers, COL_MAP.hint);
+  const colE    = findCol(headers, COL_MAP.explanation);
+
+  if (colQ === -1) return { error: '질문 열을 찾을 수 없습니다. 헤더에 "질문" 또는 "question" 이 있는지 확인하세요.' };
+  if (colA === -1) return { error: '정답 열을 찾을 수 없습니다. 헤더에 "정답" 또는 "answer" 가 있는지 확인하세요.' };
+
+  const cards = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const q = String(row[colQ] || '').trim();
+    const a = String(row[colA] || '').trim();
+    if (!q || !a) continue;
+    cards.push({
+      category:    colCat !== -1 ? String(row[colCat] || '').trim() || '기타' : '기타',
+      question:    q,
+      answer:      a,
+      hint:        colH !== -1 ? String(row[colH] || '').trim() : '',
+      explanation: colE !== -1 ? String(row[colE] || '').trim() : '',
+    });
+  }
+
+  if (cards.length === 0) return { error: '유효한 카드를 찾을 수 없습니다. 데이터를 확인해주세요.' };
+  return { cards };
+}
+
+function applyCards(cards) {
+  state.allCards = cards;
+  state.categories = [...new Set(cards.map(c => c.category))].sort();
+  state.selectedCategories = [...state.categories];
+  renderCategories();
+  showAlert('success', `총 ${cards.length}개의 카드를 불러왔습니다. 카테고리: ${state.categories.join(', ')}`);
+  showDataPreview(cards);
+  document.getElementById('categoryCard').style.display = 'block';
+}
+
+/* ===== LOAD: GOOGLE SHEETS ===== */
+async function loadFromSheets() {
+  const url = document.getElementById('sheetsUrl').value.trim();
+  if (!url) { showAlert('error', 'URL을 입력하세요.'); return; }
+
+  // Convert edit/pub URL to CSV export URL if needed
+  let csvUrl = url;
+  if (url.includes('/edit') || url.includes('/pub?')) {
+    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    const gid   = url.match(/gid=(\d+)/);
+    if (match) {
+      csvUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv${gid ? '&gid='+gid[1] : ''}`;
+    }
+  }
+
+  showAlert('info', '불러오는 중...');
+
+  try {
+    const resp = await fetch(csvUrl);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
+    const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
+    if (parsed.errors.length && !parsed.data.length) throw new Error(parsed.errors[0].message);
+    const result = parseRows(parsed.data);
+    if (result.error) { showAlert('error', result.error); return; }
+    state.lastUrl = csvUrl;
+    applyCards(result.cards);
+  } catch (e) {
+    showAlert('error', `불러오기 실패: ${e.message}. 시트가 "웹에 게시"되어 있는지 확인하세요.`);
+  }
+}
+
+/* ===== LOAD: EXCEL / CSV ===== */
+function loadFromFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      let data;
+      if (file.name.endsWith('.csv')) {
+        const text = new TextDecoder('utf-8').decode(e.target.result);
+        const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
+        data = parsed.data;
+      } else {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      }
+      const result = parseRows(data);
+      if (result.error) { showAlert('error', result.error); return; }
+      applyCards(result.cards);
+    } catch (err) {
+      showAlert('error', `파일 읽기 실패: ${err.message}`);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* Drag & Drop */
+const fileDrop = document.getElementById('fileDrop');
+fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('drag-over'); });
+fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('drag-over'));
+fileDrop.addEventListener('drop', e => {
+  e.preventDefault(); fileDrop.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const fakeEvent = { target: { files: [file] } };
+    loadFromFile(fakeEvent);
+  }
+});
+
+/* ===== CATEGORIES ===== */
+function renderCategories() {
+  const grid = document.getElementById('categoryGrid');
+  grid.innerHTML = '';
+
+  // "전체" chip
+  const allChip = document.createElement('div');
+  allChip.className = 'cat-chip all-chip' + (state.selectedCategories.length === state.categories.length ? ' selected' : '');
+  allChip.textContent = `전체 (${state.allCards.length})`;
+  allChip.onclick = () => toggleAllCategories();
+  grid.appendChild(allChip);
+
+  state.categories.forEach(cat => {
+    const count = state.allCards.filter(c => c.category === cat).length;
+    const chip  = document.createElement('div');
+    chip.className = 'cat-chip' + (state.selectedCategories.includes(cat) ? ' selected' : '');
+    chip.textContent = `${cat} (${count})`;
+    chip.onclick = () => toggleCategory(cat);
+    grid.appendChild(chip);
+  });
+}
+
+function toggleCategory(cat) {
+  if (state.selectedCategories.includes(cat)) {
+    state.selectedCategories = state.selectedCategories.filter(c => c !== cat);
+  } else {
+    state.selectedCategories.push(cat);
+  }
+  renderCategories();
+}
+
+function toggleAllCategories() {
+  if (state.selectedCategories.length === state.categories.length) {
+    state.selectedCategories = [];
+  } else {
+    state.selectedCategories = [...state.categories];
+  }
+  renderCategories();
+}
+
+/* ===== START QUIZ ===== */
+function startQuiz() {
+  if (state.selectedCategories.length === 0) {
+    alert('카테고리를 하나 이상 선택해주세요.');
+    return;
+  }
+  const pool = state.allCards.filter(c => state.selectedCategories.includes(c.category));
+  if (pool.length === 0) {
+    alert('선택한 카테고리에 카드가 없습니다.');
+    return;
+  }
+
+  state.quizCount = parseInt(document.getElementById('quizCount').value) || 5;
+  const count = Math.min(state.quizCount, pool.length);
+  state.quizCards = shuffle(pool).slice(0, count);
+  state.currentIndex = 0;
+  state.scores = [];
+
+  showScreen('quizScreen');
+  renderCard();
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* ===== RENDER CARD ===== */
+function renderCard() {
+  const card = state.quizCards[state.currentIndex];
+  const total = state.quizCards.length;
+  const idx   = state.currentIndex;
+
+  // Progress
+  document.getElementById('progressLabel').textContent = `${idx + 1} / ${total}`;
+  const correctCount = state.scores.filter(s => s.correct).length;
+  document.getElementById('scoreLabel').textContent = `${correctCount}점`;
+  document.getElementById('progressFill').style.width = `${(idx / total) * 100}%`;
+
+  // Card
+  document.getElementById('cardCategory').textContent = card.category;
+  document.getElementById('cardQuestion').textContent = card.question;
+
+  // Reset UI
+  state.hintVisible = false;
+  state.answered = false;
+  document.getElementById('hintBox').classList.remove('show');
+  document.getElementById('hintText').textContent = card.hint || '힌트가 없습니다.';
+  document.getElementById('hintBtn').textContent = '힌트 보기';
+  document.getElementById('userAnswer').value = '';
+  document.getElementById('userAnswer').disabled = false;
+  document.getElementById('resultBox').className = 'result-box';
+  document.getElementById('resultBox').classList.remove('show');
+  document.getElementById('modelAnswerBox').classList.remove('show');
+  document.getElementById('explanationBox').classList.remove('show');
+  document.getElementById('selfGradeRow').classList.remove('show');
+  document.getElementById('preGradeActions').style.display = 'flex';
+  document.getElementById('postGradeActions').style.display = 'none';
+
+  // Hint button visibility
+  document.getElementById('hintBtn').style.display = card.hint ? 'inline-flex' : 'none';
+
+  // Next button label
+  const nextBtn = document.getElementById('nextBtn');
+  nextBtn.textContent = idx + 1 < total ? '다음 문제' : '결과 보기';
+}
+
+/* ===== HINT ===== */
+function toggleHint() {
+  state.hintVisible = !state.hintVisible;
+  document.getElementById('hintBox').classList.toggle('show', state.hintVisible);
+  document.getElementById('hintBtn').textContent = state.hintVisible ? '힌트 숨기기' : '힌트 보기';
+}
+
+/* ===== GRADE ===== */
+function gradeAnswer() {
+  if (state.answered) return;
+  state.answered = true;
+
+  const card = state.quizCards[state.currentIndex];
+  const userAns = document.getElementById('userAnswer').value.trim();
+  const modelAns = card.answer;
+
+  document.getElementById('userAnswer').disabled = true;
+  document.getElementById('preGradeActions').style.display = 'none';
+  document.getElementById('postGradeActions').style.display = 'flex';
+
+  // Auto-grade: normalize and compare
+  const normalize = s => s.toLowerCase().replace(/\s+/g, ' ').replace(/[.,!?]/g, '').trim();
+  const isExact = normalize(userAns) === normalize(modelAns);
+
+  // Also check if answer contains key terms (for partial credit prompting)
+  let autoCorrect = isExact;
+  let isSubjective = modelAns.length > 40; // long answers → subjective
+
+  // Show model answer
+  document.getElementById('modelAnswer').textContent = modelAns;
+  document.getElementById('modelAnswerBox').classList.add('show');
+
+  // Show explanation
+  if (card.explanation) {
+    document.getElementById('explanationText').textContent = card.explanation;
+    document.getElementById('explanationBox').classList.add('show');
+  }
+
+  if (isSubjective) {
+    // Show result box as neutral + show self-grade buttons
+    const rb = document.getElementById('resultBox');
+    rb.className = 'result-box neutral-box show';
+    document.getElementById('resultLabel').textContent = '작성한 답';
+    document.getElementById('resultAnswer').textContent = userAns || '(입력 없음)';
+    document.getElementById('resultAnswer').style.color = 'var(--gray-700)';
+    document.getElementById('selfGradeRow').classList.add('show');
+    // Don't push score yet — wait for self-grade
+  } else {
+    // Short answer: auto-grade
+    showGradeResult(autoCorrect, userAns, modelAns);
+    state.scores.push({ correct: autoCorrect, selfGraded: false });
+    updateScoreLabel();
+  }
+}
+
+function selfGrade(correct) {
+  const userAns = document.getElementById('userAnswer').value.trim();
+  showGradeResult(correct, userAns, state.quizCards[state.currentIndex].answer);
+  document.getElementById('selfGradeRow').classList.remove('show');
+  state.scores.push({ correct, selfGraded: true });
+  updateScoreLabel();
+}
+
+function showGradeResult(correct, userAns, modelAns) {
+  const rb = document.getElementById('resultBox');
+  rb.className = `result-box ${correct ? 'correct-box' : 'wrong-box'} show`;
+  document.getElementById('resultLabel').textContent = correct ? '정답!' : '오답';
+  document.getElementById('resultAnswer').textContent = userAns || '(입력 없음)';
+  document.getElementById('resultAnswer').style.color = '';
+}
+
+function updateScoreLabel() {
+  const correct = state.scores.filter(s => s.correct).length;
+  document.getElementById('scoreLabel').textContent = `${correct}점`;
+}
+
+/* ===== NEXT / RESULTS ===== */
+function nextCard() {
+  // If not yet scored (subjective, self-grade pending), treat as skip (wrong)
+  if (state.answered && state.scores.length <= state.currentIndex) {
+    state.scores.push({ correct: false, selfGraded: true });
+    updateScoreLabel();
+  }
+
+  state.currentIndex++;
+  if (state.currentIndex >= state.quizCards.length) {
+    showResults();
+  } else {
+    renderCard();
+  }
+}
+
+function showResults() {
+  const total   = state.quizCards.length;
+  const correct = state.scores.filter(s => s.correct).length;
+  const pct     = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+  document.getElementById('finalScore').textContent = correct;
+  document.getElementById('finalTotal').textContent = total;
+
+  let emoji = '😢', msg = '다시 도전해보세요!';
+  if (pct >= 90) { emoji = '🏆'; msg = '완벽합니다!'; }
+  else if (pct >= 70) { emoji = '🎉'; msg = '잘했습니다!'; }
+  else if (pct >= 50) { emoji = '📚'; msg = '조금만 더 공부해봐요!'; }
+  document.getElementById('resultEmoji').textContent = emoji;
+  document.getElementById('resultMsg').textContent = `${pct}% 정답 — ${msg}`;
+
+  // Result list
+  const list = document.getElementById('resultList');
+  list.innerHTML = '';
+  state.quizCards.forEach((card, i) => {
+    const score = state.scores[i] || { correct: false };
+    const item  = document.createElement('div');
+    item.className = `result-item ${score.correct ? 'pass' : 'fail'}`;
+    item.innerHTML = `
+      <div class="result-item-header">
+        <span class="result-item-num">${i + 1}번</span>
+        <span class="result-item-cat">${card.category}</span>
+        <span class="result-item-status">${score.correct ? '✓ 정답' : '✗ 오답'}</span>
+      </div>
+      <div class="result-item-q">${card.question}</div>
+      <div class="result-item-a"><strong>정답:</strong> ${card.answer}</div>
+      ${card.explanation ? `<div class="result-item-a" style="margin-top:4px;"><strong>해설:</strong> ${card.explanation}</div>` : ''}
+    `;
+    list.appendChild(item);
+  });
+
+  showScreen('resultsScreen');
+}
+
+function retryQuiz() {
+  startQuiz();
+}
+
+function goSetup() {
+  showScreen('setupScreen');
+}
+
+/* ===== UI HELPERS ===== */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', (i === 0 && tab === 'sheets') || (i === 1 && tab === 'excel'));
+  });
+  document.getElementById('tab-sheets').classList.toggle('active', tab === 'sheets');
+  document.getElementById('tab-excel').classList.toggle('active', tab === 'excel');
+}
+
+function showAlert(type, msg) {
+  const box = document.getElementById('alertBox');
+  box.className = `alert alert-${type} show`;
+  const icons = { info: 'ℹ️', success: '✅', error: '❌' };
+  box.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+}
+
+function showDataPreview(cards) {
+  const cats = [...new Set(cards.map(c => c.category))];
+  const prev = document.getElementById('dataPreview');
+  prev.className = 'data-preview show';
+  prev.innerHTML = `<strong>${cards.length}개 카드</strong> 로드됨 &nbsp;|&nbsp; 카테고리 ${cats.length}개: ${cats.join(', ')}`;
+}
+
+/* ===== GUIDE MODAL ===== */
+const guides = {
+  sheets: {
+    title: 'Google Sheets 공개 URL 만들기',
+    content: `
+      <h3>1. 스프레드시트 형식</h3>
+      <p>첫 번째 행은 반드시 헤더여야 합니다:</p>
+      <table class="col-table">
+        <tr><th>열</th><th>헤더 이름 (아무거나 가능)</th><th>필수</th></tr>
+        <tr><td>A</td><td>카테고리</td><td></td></tr>
+        <tr><td>B</td><td>질문</td><td>필수</td></tr>
+        <tr><td>C</td><td>정답</td><td>필수</td></tr>
+        <tr><td>D</td><td>힌트</td><td></td></tr>
+        <tr><td>E</td><td>해설</td><td></td></tr>
+      </table>
+
+      <h3>2. 웹에 게시하기</h3>
+      <ol>
+        <li>Google Sheets 메뉴 → <strong>파일</strong> → <strong>공유</strong> → <strong>웹에 게시</strong></li>
+        <li>게시 형식을 <strong>CSV</strong>로 선택</li>
+        <li><strong>게시</strong> 버튼 클릭</li>
+        <li>표시되는 URL을 복사해서 위 입력란에 붙여넣기</li>
+      </ol>
+
+      <h3>3. 주의사항</h3>
+      <ul>
+        <li>시트를 수정하면 약 1~2분 후 자동 반영됩니다.</li>
+        <li>시트에 민감한 정보가 없는지 확인하세요.</li>
+      </ul>
+    `
+  }
+};
+
+function showGuide(key) {
+  const g = guides[key];
+  document.getElementById('guideTitle').textContent = g.title;
+  document.getElementById('guideContent').innerHTML = g.content;
+  document.getElementById('guideModal').classList.add('show');
+}
+
+function closeGuide() {
+  document.getElementById('guideModal').classList.remove('show');
+}
+
+document.getElementById('guideModal').addEventListener('click', function(e) {
+  if (e.target === this) closeGuide();
+});
+
+/* ===== KEYBOARD ===== */
+document.addEventListener('keydown', e => {
+  const quizActive = document.getElementById('quizScreen').classList.contains('active');
+  if (!quizActive) return;
+
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    if (!state.answered) gradeAnswer();
+    else nextCard();
+  }
+  if (e.key === 'h' && !state.answered && document.activeElement.tagName !== 'TEXTAREA') {
+    toggleHint();
+  }
+});
+</script>
+</body>
+</html>
