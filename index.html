@@ -808,13 +808,26 @@ function extractKeywords(text) {
     .filter(w => w.length >= 2 && !KO_STOPWORDS.has(w) && !/^\d+$/.test(w));
 }
 
+function kwMatches(userText, keyword) {
+  const kw = keyword.toLowerCase();
+  const ut = userText.toLowerCase();
+  // 직접 포함
+  if (ut.includes(kw)) return true;
+  // 부분 매칭: 유저가 쓴 단어가 키워드의 60% 이상이면 인정
+  const userWords = ut.split(/\s+/).filter(w => w.length >= 2);
+  for (const word of userWords) {
+    if (kw.startsWith(word) && word.length >= kw.length * 0.6) return true;
+    if (word.startsWith(kw) && kw.length >= word.length * 0.6) return true;
+  }
+  return false;
+}
+
 function keywordGrade(userAns, modelAns) {
   const keywords = extractKeywords(modelAns);
   if (keywords.length === 0) return { score: 1, matched: [], missed: [] };
-  const userLower = userAns.toLowerCase();
   const matched = [], missed = [];
   keywords.forEach(kw => {
-    (userLower.includes(kw.toLowerCase()) ? matched : missed).push(kw);
+    (kwMatches(userAns, kw) ? matched : missed).push(kw);
   });
   return { score: matched.length / keywords.length, matched, missed };
 }
