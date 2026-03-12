@@ -322,6 +322,17 @@
 
     .divider { height: 1px; background: var(--gray-100); margin: 16px 0; }
 
+    .keyword-box {
+      background: var(--gray-50); border: 1.5px solid var(--gray-200);
+      border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
+    }
+    .kw-chip {
+      display: inline-block; padding: 3px 10px; border-radius: 12px;
+      font-size: 0.78rem; font-weight: 600; margin: 3px 4px 3px 0;
+    }
+    .kw-hit { background: #dcfce7; color: var(--success); }
+    .kw-miss { background: #fee2e2; color: var(--error); }
+
     .help-link {
       display: inline-flex; align-items: center; gap: 4px;
       font-size: 0.78rem; color: var(--primary-light); cursor: pointer;
@@ -449,6 +460,13 @@
   <div id="explanationBox" class="explanation-box">
     <div class="result-label">해설</div>
     <div id="explanationText" class="explanation-text"></div>
+  </div>
+
+  <!-- Keyword feedback -->
+  <div id="keywordBox" class="keyword-box" style="display:none;">
+    <div class="result-label" style="color:var(--gray-500); margin-bottom:8px;">키워드 분석</div>
+    <div id="keywordChips"></div>
+    <div id="keywordScore" style="font-size:0.78rem; color:var(--gray-500); margin-top:6px;"></div>
   </div>
 
   <!-- Self-grade (for subjective answers) -->
@@ -753,6 +771,7 @@ function renderCard() {
   document.getElementById('modelAnswerBox').classList.remove('show');
   document.getElementById('explanationBox').classList.remove('show');
   document.getElementById('selfGradeRow').classList.remove('show');
+  document.getElementById('keywordBox').style.display = 'none';
   document.getElementById('preGradeActions').style.display = 'flex';
   document.getElementById('postGradeActions').style.display = 'none';
 
@@ -771,6 +790,35 @@ function toggleHint() {
   document.getElementById('hintBtn').textContent = state.hintVisible ? '힌트 숨기기' : '힌트 보기';
 }
 
+/* ===== KEYWORD GRADING ===== */
+const KO_STOPWORDS = new Set([
+  '은','는','이','가','을','를','의','에','에서','로','으로','와','과','도','만',
+  '이다','하다','있다','없다','되다','그','것','수','등','및','또는','혹은','한',
+  '그리고','하지만','그러나','따라서','즉','또한','뿐만','아니라','다만','위해',
+  '때문에','통해','대해','대한','위한','관한','관해','경우','때','후','전','중',
+  '하여','하며','하고','하면','하는','하여서','함으로써','으로서','로서','에게',
+  '에서는','에서도','에서만','이라고','라고','이란','란','라는','이라는',
+]);
+
+function extractKeywords(text) {
+  return text
+    .replace(/[.,!?;:()\[\]【】「」『』""'']/g, ' ')
+    .split(/\s+/)
+    .map(w => w.trim())
+    .filter(w => w.length >= 2 && !KO_STOPWORDS.has(w) && !/^\d+$/.test(w));
+}
+
+function keywordGrade(userAns, modelAns) {
+  const keywords = extractKeywords(modelAns);
+  if (keywords.length === 0) return { score: 1, matched: [], missed: [] };
+  const userLower = userAns.toLowerCase();
+  const matched = [], missed = [];
+  keywords.forEach(kw => {
+    (userLower.includes(kw.toLowerCase()) ? matched : missed).push(kw);
+  });
+  return { score: matched.length / keywords.length, matched, missed };
+}
+
 /* ===== GRADE ===== */
 function gradeAnswer() {
   if (state.answered) return;
@@ -784,14 +832,6 @@ function gradeAnswer() {
   document.getElementById('preGradeActions').style.display = 'none';
   document.getElementById('postGradeActions').style.display = 'flex';
 
-  // Auto-grade: normalize and compare
-  const normalize = s => s.toLowerCase().replace(/\s+/g, ' ').replace(/[.,!?]/g, '').trim();
-  const isExact = normalize(userAns) === normalize(modelAns);
-
-  // Also check if answer contains key terms (for partial credit prompting)
-  let autoCorrect = isExact;
-  let isSubjective = modelAns.length > 40; // long answers → subjective
-
   // Show model answer
   document.getElementById('modelAnswer').textContent = modelAns;
   document.getElementById('modelAnswerBox').classList.add('show');
@@ -802,20 +842,47 @@ function gradeAnswer() {
     document.getElementById('explanationBox').classList.add('show');
   }
 
-  if (isSubjective) {
-    // Show result box as neutral + show self-grade buttons
+  // Keyword grading
+  const { score, matched, missed } = keywordGrade(userAns, modelAns);
+
+  // Show keyword analysis
+  const kwBox = document.getElementById('keywordBox');
+  const kwChips = document.getElementById('keywordChips');
+  const kwScore = document.getElementById('keywordScore');
+  kwChips.innerHTML = '';
+  matched.forEach(kw => {
+    const chip = document.createElement('span');
+    chip.className = 'kw-chip kw-hit';
+    chip.textContent = '✓ ' + kw;
+    kwChips.appendChild(chip);
+  });
+  missed.forEach(kw => {
+    const chip = document.createElement('span');
+    chip.className = 'kw-chip kw-miss';
+    chip.textContent = '✗ ' + kw;
+    kwChips.appendChild(chip);
+  });
+  const pct = Math.round(score * 100);
+  kwScore.textContent = `키워드 일치율: ${matched.length} / ${matched.length + missed.length} (${pct}%)`;
+  kwBox.style.display = matched.length + missed.length > 0 ? 'block' : 'none';
+
+  // Auto-grade decision
+  if (score >= 0.7) {
+    showGradeResult(true, userAns);
+    state.scores.push({ correct: true, selfGraded: false });
+    updateScoreLabel();
+  } else if (score <= 0.3 && userAns.length > 0) {
+    showGradeResult(false, userAns);
+    state.scores.push({ correct: false, selfGraded: false });
+    updateScoreLabel();
+  } else {
+    // Ambiguous → self-grade
     const rb = document.getElementById('resultBox');
     rb.className = 'result-box neutral-box show';
-    document.getElementById('resultLabel').textContent = '작성한 답';
+    document.getElementById('resultLabel').textContent = '작성한 답 (자기 채점 필요)';
     document.getElementById('resultAnswer').textContent = userAns || '(입력 없음)';
     document.getElementById('resultAnswer').style.color = 'var(--gray-700)';
     document.getElementById('selfGradeRow').classList.add('show');
-    // Don't push score yet — wait for self-grade
-  } else {
-    // Short answer: auto-grade
-    showGradeResult(autoCorrect, userAns, modelAns);
-    state.scores.push({ correct: autoCorrect, selfGraded: false });
-    updateScoreLabel();
   }
 }
 
@@ -827,7 +894,7 @@ function selfGrade(correct) {
   updateScoreLabel();
 }
 
-function showGradeResult(correct, userAns, modelAns) {
+function showGradeResult(correct, userAns) {
   const rb = document.getElementById('resultBox');
   rb.className = `result-box ${correct ? 'correct-box' : 'wrong-box'} show`;
   document.getElementById('resultLabel').textContent = correct ? '정답!' : '오답';
