@@ -405,6 +405,32 @@
     <button class="btn btn-primary btn-lg" onclick="startQuiz()">시작하기</button>
   </div>
 
+  <!-- AI 채점 설정 -->
+  <div class="card">
+    <div class="card-title" style="cursor:pointer;" onclick="toggleAiSettings()">
+      AI 채점 설정 (선택)
+      <span id="aiSettingsArrow" style="float:right;">▼</span>
+    </div>
+    <div id="aiSettingsBody">
+      <p style="font-size:0.82rem; color:var(--gray-500); margin-bottom:12px;">
+        Gemini API 키를 입력하면 긴 서술형 답안을 AI가 내용 기반으로 채점합니다.<br>
+        키는 기기에만 저장되며 외부로 전송되지 않습니다.
+      </p>
+      <div class="form-group">
+        <label class="form-label">Google Gemini API 키</label>
+        <input type="password" id="geminiApiKey" placeholder="AIza..." />
+        <p class="form-note">
+          <button class="help-link" onclick="showGuide('gemini')">무료 API 키 발급 방법 보기</button>
+        </p>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-primary btn-sm" onclick="saveApiKey()">저장</button>
+        <button class="btn btn-outline btn-sm" onclick="clearApiKey()">삭제</button>
+        <span id="apiKeyStatus" style="font-size:0.78rem; align-self:center; color:var(--gray-400);"></span>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ============================================================ -->
@@ -450,6 +476,7 @@
   <div id="resultBox" class="result-box">
     <div class="result-label" id="resultLabel"></div>
     <div class="result-answer" id="resultAnswer"></div>
+    <div id="aiFeedback" style="font-size:0.82rem; margin-top:6px; opacity:0.8;"></div>
   </div>
 
   <div id="modelAnswerBox" class="result-box neutral-box">
@@ -772,6 +799,7 @@ function renderCard() {
   document.getElementById('explanationBox').classList.remove('show');
   document.getElementById('selfGradeRow').classList.remove('show');
   document.getElementById('keywordBox').style.display = 'none';
+  document.getElementById('aiFeedback').textContent = '';
   document.getElementById('preGradeActions').style.display = 'flex';
   document.getElementById('postGradeActions').style.display = 'none';
 
@@ -788,6 +816,74 @@ function toggleHint() {
   state.hintVisible = !state.hintVisible;
   document.getElementById('hintBox').classList.toggle('show', state.hintVisible);
   document.getElementById('hintBtn').textContent = state.hintVisible ? '힌트 숨기기' : '힌트 보기';
+}
+
+/* ===== API KEY ===== */
+function saveApiKey() {
+  const key = document.getElementById('geminiApiKey').value.trim();
+  if (!key) { alert('키를 입력하세요.'); return; }
+  localStorage.setItem('gemini_api_key', key);
+  document.getElementById('apiKeyStatus').textContent = '저장됨 ✓';
+  document.getElementById('apiKeyStatus').style.color = 'var(--success)';
+}
+function clearApiKey() {
+  localStorage.removeItem('gemini_api_key');
+  document.getElementById('geminiApiKey').value = '';
+  document.getElementById('apiKeyStatus').textContent = '삭제됨';
+  document.getElementById('apiKeyStatus').style.color = 'var(--gray-400)';
+}
+function getApiKey() { return localStorage.getItem('gemini_api_key') || ''; }
+function toggleAiSettings() {
+  const body = document.getElementById('aiSettingsBody');
+  const arrow = document.getElementById('aiSettingsArrow');
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? 'block' : 'none';
+  arrow.textContent = hidden ? '▼' : '▶';
+}
+
+/* ===== AI GRADING (Gemini) ===== */
+async function aiGrade(question, modelAns, userAns) {
+  const apiKey = getApiKey();
+  if (!apiKey) return null;
+
+  const prompt = `당신은 법학 시험 채점관입니다.
+
+문제: ${question}
+모범 답안: ${modelAns}
+학생 답변: ${userAns || '(미작성)'}
+
+학생 답변이 핵심 개념을 포함하고 내용상 옳다면 표현이 달라도 정답입니다.
+반드시 아래 형식으로만 답하세요 (다른 말 금지):
+결과: 정답
+이유: (한 줄)
+
+또는
+
+결과: 오답
+이유: (한 줄)`;
+
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 100, temperature: 0.1 }
+        })
+      }
+    );
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const correct = text.includes('결과: 정답');
+    const reasonMatch = text.match(/이유:\s*(.+)/);
+    const reason = reasonMatch ? reasonMatch[1].trim() : '';
+    return { correct, reason };
+  } catch {
+    return null;
+  }
 }
 
 /* ===== KEYWORD GRADING ===== */
@@ -833,7 +929,7 @@ function keywordGrade(userAns, modelAns) {
 }
 
 /* ===== GRADE ===== */
-function gradeAnswer() {
+async function gradeAnswer() {
   if (state.answered) return;
   state.answered = true;
 
@@ -879,7 +975,30 @@ function gradeAnswer() {
   kwScore.textContent = `키워드 일치율: ${matched.length} / ${matched.length + missed.length} (${pct}%)`;
   kwBox.style.display = matched.length + missed.length > 0 ? 'block' : 'none';
 
-  // Auto-grade decision
+  // 긴 서술형이고 API 키 있으면 AI 채점
+  const isLong = modelAns.length > 50;
+  if (isLong && getApiKey()) {
+    const rb = document.getElementById('resultBox');
+    rb.className = 'result-box neutral-box show';
+    document.getElementById('resultLabel').textContent = 'AI 채점 중...';
+    document.getElementById('resultAnswer').textContent = userAns || '(입력 없음)';
+    document.getElementById('resultAnswer').style.color = 'var(--gray-700)';
+
+    const result = await aiGrade(card.question, modelAns, userAns);
+    if (result) {
+      showGradeResult(result.correct, userAns);
+      document.getElementById('aiFeedback').textContent = result.reason ? `AI 평가: ${result.reason}` : '';
+      state.scores.push({ correct: result.correct, selfGraded: false });
+      updateScoreLabel();
+    } else {
+      // AI 실패 → 자기채점으로 fallback
+      document.getElementById('resultLabel').textContent = '작성한 답 (자기 채점 필요)';
+      document.getElementById('selfGradeRow').classList.add('show');
+    }
+    return;
+  }
+
+  // 키워드 채점
   if (score >= 0.7) {
     showGradeResult(true, userAns);
     state.scores.push({ correct: true, selfGraded: false });
@@ -1012,7 +1131,40 @@ function showDataPreview(cards) {
 }
 
 /* ===== GUIDE MODAL ===== */
+// 페이지 로드 시 저장된 키 표시
+window.addEventListener('DOMContentLoaded', () => {
+  const key = getApiKey();
+  if (key) {
+    document.getElementById('geminiApiKey').value = key;
+    document.getElementById('apiKeyStatus').textContent = '저장됨 ✓';
+    document.getElementById('apiKeyStatus').style.color = 'var(--success)';
+  }
+  // AI 설정 기본 접힘
+  document.getElementById('aiSettingsBody').style.display = 'none';
+  document.getElementById('aiSettingsArrow').textContent = '▶';
+});
+
 const guides = {
+  gemini: {
+    title: 'Google Gemini 무료 API 키 발급',
+    content: `
+      <h3>1. Google AI Studio 접속</h3>
+      <p><code>aistudio.google.com</code> 에 접속해서 Google 계정으로 로그인하세요.</p>
+
+      <h3>2. API 키 발급</h3>
+      <ol>
+        <li>왼쪽 메뉴에서 <strong>Get API key</strong> 클릭</li>
+        <li><strong>Create API key</strong> 버튼 클릭</li>
+        <li>생성된 키 복사 (<code>AIza...</code> 로 시작)</li>
+      </ol>
+
+      <h3>3. 앱에 입력</h3>
+      <p>복사한 키를 앱의 "AI 채점 설정" 입력란에 붙여넣고 <strong>저장</strong>을 누르세요.</p>
+
+      <h3>무료 한도</h3>
+      <p>Gemini 2.0 Flash 기준 하루 1,500회, 분당 15회 무료입니다. 개인 학습용으로는 충분합니다.</p>
+    `
+  },
   sheets: {
     title: 'Google Sheets 공개 URL 만들기',
     content: `
